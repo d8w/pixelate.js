@@ -5,18 +5,30 @@
  * License: MIT
  */
 (function(window, $) {
-	var pixelate = function() {
+	var pixelate = function(arguments) {
+		if(!this.src)
+			return;
+
 		var defaults = {
 			value: 0.05,
 			reveal: true,
 			revealonclick: false
 		};
-		var options = arguments[1] || {};
-		var element = this, //arguments[0],
+		var options = {};
+
+		if(arguments)
+            for(var k in defaults)
+                if(typeof arguments[k] !== undefined && arguments[k] != null)
+                    options[k] = arguments[k];
+                else
+                    options[k] = defaults[k];
+
+		var element = this, 
 			elementParent = element.parentNode;
-		if(typeof options !== 'object') {
-			options = { value: parseInt(arguments[1]) };
+		if(element.style.display) {
+            element.style.display = 'block';
 		}
+        if(element.offsetWidth == 0) {} // enforce applying the style to the image
 		options = (function() {
 			var opts = {};
 			for(var k in defaults) {
@@ -48,7 +60,17 @@
 		ctx.drawImage(element, 0, 0, width, height);
 		ctx.drawImage(canv, 0, 0, width, height, 0, 0, canv.width, canv.height);
 		element.style.display = 'none';
-		elementParent.insertBefore(canv, element);
+        if(element.offsetWidth == 0) {} // enforce applying the style to the image
+		/*
+		 * Replace if exist, insert o.w.
+		 */
+		var previousNode=element.previousSibling;
+		if(previousNode && previousNode.nodeName === 'CANVAS') {
+            elementParent.replaceChild(canv, previousNode);
+		} else {
+            elementParent.insertBefore(canv, element);
+		}
+
 		if(options.revealonclick !== false && options.revealonclick !== 'false') {
 			/*
 			 * Reveal on click
@@ -78,12 +100,27 @@
 			});
 		}
 	};
+	var depixelate = function() {
+		var element = this, 
+			elementParent = element.parentNode;
+		if(element.style.display) {
+            element.style.display = 'block';
+		}
+		var previousNode=element.previousSibling;
+		if(previousNode && previousNode.nodeName === 'CANVAS')
+            elementParent.removeChild(previousNode);
+	};
 	window.HTMLImageElement.prototype.pixelate = pixelate;
 	if(typeof $ === 'function') {
 		$.fn.extend({
-			pixelate: function() {
+			pixelate: function(args) {
 				return this.each(function() {
-					pixelate.apply(this, arguments);
+                    pixelate.apply(this, [args]);
+				});
+			},
+			depixelate: function() {
+				return this.each(function() {
+                    depixelate.apply(this);
 				});
 			}
 		});
@@ -97,3 +134,4 @@
 		};
 	});
 })(window, typeof jQuery === 'undefined' ? null : jQuery);
+
